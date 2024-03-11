@@ -18,6 +18,8 @@ library(leaflet)
 ## define functions needed later
 ## ======================================================================================
 ## function that combines the classes we want from ter and selects accordingly
+## FIXME there is still some rantaviiva missing by e.g. Preiviikki, so some category is still needed
+##    though could also try to buffer so that they get joined in any case.
 tersub <- function(dat) {
   dat$luokka <- paste(dat$kohdeluokka, dat$kartografinenluokka, sep = ":")
   # define wantclasses
@@ -137,3 +139,14 @@ leaflet() %>%
   addCircles(data=hpoints, weight=3, color=~rockpal(Kivi), fillColor = ~rockpal(Kivi)) %>%
   addLegend("bottomleft", pal=beachpal, values=tdatz$Ranta, title="Rantaviiva") %>%
   addLegend("bottomleft", pal=rockpal, values=hpoints$Kivi, title="Vesikivi")
+
+## ============================================================================================
+## save data
+## =============================================================================================
+savedat <- T
+
+if(savedat) {
+  saveRDS(tdatz, "../dat-private/rauma/dat-mod/beach.rds")
+  saveRDS(hpoints, "../dat-private/rauma/dat-mod/rocks.rds")
+  saveRDS(hpolys, "../dat-private/rauma/dat-mod/rockies.rds")
+}
