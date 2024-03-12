@@ -3,7 +3,8 @@
 ##    Vedenpäällinen (38513) Vesikivikko (38600) 
 ## FIXME from maasto2, maastokuvionreuna uniquely epamaarainen reunaviiva ja yksikasitteinen
 ##    see email mml 11.3. may wish to grab matalikko 38600 and maatuva vesialue 38300 -
-##    not doing this now for simplicity but may need to discuss
+##    not doing this now for simplicity but may need to discuss; inspected visually and it seems
+##    unnecessary for our purposes
 
 ## libraries
 library(reshape2)
@@ -20,6 +21,7 @@ library(leaflet)
 ## function that combines the classes we want from ter and selects accordingly
 ## FIXME there is still some rantaviiva missing by e.g. Preiviikki, so some category is still needed
 ##    though could also try to buffer so that they get joined in any case.
+## I attempted to find the necessary classes but nothing uniquely coastal came up.
 tersub <- function(dat) {
   dat$luokka <- paste(dat$kohdeluokka, dat$kartografinenluokka, sep = ":")
   # define wantclasses
@@ -58,11 +60,14 @@ removedups <- function(ids, dat) {
 ## define situation
 tlaywant <- "maastokuvionreuna" 
 hlaywant <- c("vesikivi","vesikivikko")
-
+slaywant <- "meri" # for processing, h will be subtracted from s
 nfiles <- 5
+
 tfiles <- paste("../dat-private/rauma/maasto-", c(1:nfiles), ".gpkg", sep="")
 hfiles <- paste("../dat-private/rauma/hydro-", c(1:nfiles), ".gpkg", sep="")
+sfiles <- paste("../dat-private/rauma/hydro-", c(1:nfiles), ".gpkg", sep="")
 
+# rep for Map
 hfiles <- rep(hfiles, times=length(hlaywant))
 hlaywant <- rep(hlaywant, each=nfiles)
 
@@ -77,6 +82,9 @@ names(tdatz) <- paste("tdat",seq_along(tdatz), sep="") # probs no need for infor
 hdatz <- Map(st_read, dsn=hfiles, layer=hlaywant) # first all vesikivi, then vesikivikko
 names(hdatz) <- paste("hdat",seq_along(hdatz), sep="") # probs no need for informative names
 
+sdatz <- lapply(sfiles, st_read, layer=slaywant)
+names(sdatz) <- paste("sdat",seq_along(sdatz), sep="") # probs no need for informative names
+
 ## make maasto smaller by grabbing the rows we need
 ## NOTE: initially done by inspection through leaflet, confirmed with mml via email 11.3.
 tdatz <- lapply(tdatz, tersub)
@@ -84,8 +92,10 @@ tdatz <- lapply(tdatz, tersub)
 ## change crs to leaflet
 tdatz <- lapply(tdatz, st_transform, crs = 4326)
 hdatz <- lapply(hdatz, st_transform, crs = 4326)
+sdatz <- lapply(sdatz, st_transform, crs = 4326)
 
 ## since had to manually draw download boxes, need to check for duplicated objects
+## Note not doing this for sea as will dissolve it all
 tidz <- lapply(tdatz, function(x) {ids <- c(x$mtk_id)}) # recall still named tdat[n]!
 hidz <- lapply(hdatz, function(x) {ids <- c(x$mtk_id)}) # recall still named tdat[n]!
 
@@ -100,6 +110,10 @@ hdatz <- Map(removedups, hdups, hdatz)
 tdatz <- do.call(rbind, tdatz)
 hpoints <- do.call(rbind, hdatz[1:nfiles] )
 hpolys <- do.call(rbind, hdatz[nfiles+1:length(hdatz)])
+sdatz <- do.call(rbind, sdatz)
+
+## dissolve sea
+sdatz <- st_union(sdatz)
 
 ## ===============================================================================================
 ## create descriptive values for the different classes of map object
@@ -134,19 +148,24 @@ leaflet() %>%
   setView(lng = 21.51127, lat = 61.62724, zoom = 10) %>%
   addProviderTiles(providers$OpenTopoMap, options=providerTileOptions(minZoom=11)) %>% 
   #addProviderTiles("CartoDB.Positron", options=providerTileOptions(maxZoom=10, apikey=apithunder)) %>% # , options = providerTileOptions(opacity = 0)
-  addPolylines(data=tdatz, weight=4, color=~beachpal(Ranta), opacity = 0.6) %>%
+  addPolylines(data=tdatz, weight=4, color=~beachpal(Ranta), opacity = 0.6, label=~kartografinenluokka) %>%
   addPolygons(data=hpolys, weight=3, color='black', fillColor = '#80cdc1', label="Kivikko", fillOpacity = 0.7) %>%
   addCircles(data=hpoints, weight=3, color=~rockpal(Kivi), fillColor = ~rockpal(Kivi)) %>%
   addLegend("bottomleft", pal=beachpal, values=tdatz$Ranta, title="Rantaviiva") %>%
-  addLegend("bottomleft", pal=rockpal, values=hpoints$Kivi, title="Vesikivi")
+  addLegend("bottomleft", pal=rockpal, values=hpoints$Kivi, title="Vesikivi") %>%
+  addScaleBar(position="bottomright", options = scaleBarOptions(imperial=F)) %>%
+  addPolygons(data=sdatz, color="#045a8d", fillColor = "#045a8d", 
+              highlightOptions = highlightOptions(color="white", fillColor = "white", 
+                                                  opacity = 0.1, fillOpacity = 0.1))
 
 ## ============================================================================================
 ## save data
 ## =============================================================================================
-savedat <- T
+savedat <- F
 
 if(savedat) {
   saveRDS(tdatz, "../dat-private/rauma/dat-mod/beach.rds")
   saveRDS(hpoints, "../dat-private/rauma/dat-mod/rocks.rds")
   saveRDS(hpolys, "../dat-private/rauma/dat-mod/rockies.rds")
+  saveRDS(sdatz, "../dat-private/rauma/dat-mod/sea.rds")
 }
