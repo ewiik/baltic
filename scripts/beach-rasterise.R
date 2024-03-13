@@ -46,6 +46,9 @@ sealeft <- do.call(rbind, sealeft)
 ## replace raster values
 sea_rast <- rasterize(sealeft, sea_rast, field=-10, update=TRUE)
 
+## now update the notsea1
+sea_rast <- rasterize(notsea1, sea_rast, field=0, update=TRUE)
+
 ## create a depth proxy for rock
 notsea2$Depth <- ifelse(notsea2$Kivi=="Vedenalainen", -1, ifelse(notsea2$Kivi=="Pinnassa", -0.5, 0))
 
