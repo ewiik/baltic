@@ -26,9 +26,16 @@ return(x)
 ## check basics (empty data, completeness of data)
 lapply(datz, nrow) # more in tahko so there must be some missings in kylma
 lapply(datz, summary) # no NA
+# but ha, noticed when trying to run the script that wind deg has dashes!! failed to notice class character in summary for tahko
+names(datz) <- c('dat1','dat2')
+list2env(datz, envir = globalenv())
+
+dat1$`Tuulen suunta (deg)`[which(dat1$`Tuulen suunta (deg)` == "-")] <- NA
+dat1 <- na.omit(dat1)
+dat1$`Tuulen suunta (deg)` <- as.numeric(dat1$`Tuulen suunta (deg)`)
 
 ## save csvs
-write.csv(datz[[1]], '../dat-private/rauma/dat-mod/tahko-clean.csv',
+write.csv(dat1, '../dat-private/rauma/dat-mod/tahko-clean.csv',
           row.names = F)
-write.csv(datz[[2]], '../dat-private/rauma/dat-mod/kylma-clean.csv',
+write.csv(dat2, '../dat-private/rauma/dat-mod/kylma-clean.csv',
           row.names = F)
