@@ -77,3 +77,6 @@ leaflet() %>%
 ## save raster
 saveRDS(searast, "../dat-private/rauma/dat-mod/depth-raster-leaflet.rds")
 saveRDS(sea_rast, "../dat-private/rauma/dat-mod/depth-raster.rds")
+# and for python script
+writeRaster(sea_rast, "../dat-private/rauma/dat-mod/depth-raster-py.tiff", 
+            datatype="FLT4S", overwrite=TRUE)
