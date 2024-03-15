@@ -66,7 +66,7 @@ dat <- merge(dat, sedsoft[,c("Kohteen.nimi.","pSoft", "pMegaSoft")], sort = F)
 ## select columns we want
 colwant <- c("Kohteen.nimi.", "Arviointiruudun.N.koordinaatti..aste.desimaali.", 
              "Arviointiruudun.E.koordinaatti..aste.desimaali.","Kartoituspvm.", "Arviointiruudun.syvyys",
-             "pSoft", 'pMegaSoft')
+             "pSoft", 'pMegaSoft', 'Secchi.syvyys.m')
 
 basedat <- dat[,colwant]
 
@@ -85,18 +85,6 @@ basespat <- SpatialPointsDataFrame(coords = basedat[,c("Arviointiruudun.E.koordi
                                    proj4string=CRS("+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0"),
                                    data=basedat )
 basevect <- vect(basespat)
-
-## define colour scheme for rock
-rockpal <- colorFactor(palette = c('#80cdc1','#018571','#a6611a'),
-                       levels = c("Vedenalainen",'Pinnassa',"Vedenpaallinen"))
-
-leaflet() %>%
-  addProviderTiles(provider = providers$OpenTopoMap) %>% # doesn't show nature areas as well as open
-  addCircles(data=basespat, label = ~Kohteen.nimi.) %>%
-  addPolygons(data=rockies, weight=3, color='black', fillColor = '#80cdc1', label="Kivikko", fillOpacity = 0.7) %>%
-  addCircles(data=rocks, weight=3, color=~rockpal(Kivi), fillColor = ~rockpal(Kivi)) %>%
-addScaleBar(position="bottomright", options = scaleBarOptions(imperial=F))
-  #addRasterImage(searast, colors = seapal, opacity = 0.6) 
 
 ## ==============================================================================
 ## biological data
@@ -133,19 +121,9 @@ notsp <- do.call(rbind, notsp)
 biodat <- rbind(biodat, notsp)
 
 ## bring back syvyys and other desired explanatory variables
-biodat <- merge(biodat, unique(dat[,c('Kohteen.nimi.','Arviointiruudun.syvyys', 'pSoft','pMegaSoft')]))
+biodat <- merge(biodat, unique(dat[,c('Kohteen.nimi.','Arviointiruudun.syvyys', 'pSoft',
+                                      'pMegaSoft', 'Secchi.syvyys.m')]))
 
-ggplot(biodat, aes(x=pMegaSoft, y=Cover, group= HAVAITTU.LAJI.lajiryhmä.,
-                   color=Cover>0)) +
-  theme_bw() +
-  geom_point(alpha=0.7) +
-  facet_wrap(~HAVAITTU.LAJI.lajiryhmä., ncol=1, scales = "free_y")
-
-ggplot(biodat, aes(x=pMegaSoft, y=pSoft, group= HAVAITTU.LAJI.lajiryhmä.,
-                   color=Cover>0)) +
-  theme_bw() +
-  geom_point(alpha=0.7) +
-  facet_wrap(~HAVAITTU.LAJI.lajiryhmä., ncol=1, scales = "free_y")
 
 ## ==============================================================================
 ## put in exposure values from raster
@@ -157,3 +135,53 @@ baserast <- project(basevect, "epsg:3067")
 extracted_values <- extract(expo, baserast)
 
 basevect$Exposure <- extracted_values$`tahko-exp`
+
+## one point gets zero because it maps onto kivikko, give it its neighbour's value
+basevect$Exposure[basevect$Kohteen.nimi.=='W001_2,5_8'] <- basevect$Exposure[basevect$Kohteen.nimi.=='W001_2,7_18']
+
+## add to biodat too
+biodat <- merge(biodat, basevect[,c("Kohteen.nimi.", "Exposure")], sort=F)
+
+## =======================================================================================
+## plotting
+## =================================================================================
+## create right epsg for leaflet for basevect
+baseleaf <- project(basevect, crs("epsg:4326"))
+
+## define colour scheme for rock
+rockpal <- colorFactor(palette = c('#80cdc1','#018571','#a6611a'),
+                       levels = c("Vedenalainen",'Pinnassa',"Vedenpaallinen"))
+lutupal <- colorFactor(palette=c('#a6cee3','#1f78b4','#b2df8a','#33a02c','#fb9a99','#e31a1c','#fdbf6f',
+                                 '#ff7f00','#cab2d6','#969696'),
+                       levels=c("I1.01 Haurupohjat", "I4.01 Sinisimpukkapohjat", "I02.02 Vitapohjat",
+                                "I2.05 Ärviäpohjat", "I04.03 Merirokkopohjat","I1.02 Punaleväpohjat",
+                                "I5.03 Yksivuotisten rihmalevien luonnehtimat pohjat",
+                                "I1.03 Monivuotisten rihmalevien luonnehtimat pohjat",
+                                "I5.02 Kultajouhi- ja jouhileväpohjat","ei luontotyyppiä"  ))
+
+leaflet() %>%
+  addProviderTiles(provider = providers$OpenTopoMap) %>% # doesn't show nature areas as well as open
+  addCircles(data=baseleaf, label = ~Kohteen.nimi., color=~lutupal(LuTu.final),
+             fillColor = ~lutupal(LuTu.final), radius=~Secchi.syvyys.m*10) %>%
+  addPolygons(data=rockies, weight=3, color='black', fillColor = '#80cdc1', label="Kivikko", fillOpacity = 0.7) %>%
+  addCircles(data=rocks, weight=3, color=~rockpal(Kivi), fillColor = ~rockpal(Kivi)) %>%
+  addScaleBar(position="bottomright", options = scaleBarOptions(imperial=F))
+
+ggplot(biodat, aes(x=Secchi.syvyys.m, y=Arviointiruudun.syvyys, group= HAVAITTU.LAJI.lajiryhmä.,
+                   color=Cover, size=Cover)) +
+  theme_bw() +
+  scale_color_viridis_c() +
+  geom_point(alpha=0.7) +
+  facet_wrap(~HAVAITTU.LAJI.lajiryhmä., ncol=1, scales = "free_y")
+
+ggplot(biodat, aes(x=pMegaSoft, y=pSoft, group= HAVAITTU.LAJI.lajiryhmä.,
+                   color=Cover>0)) +
+  theme_bw() +
+  geom_point(alpha=0.7) +
+  facet_wrap(~HAVAITTU.LAJI.lajiryhmä., ncol=1, scales = "free_y")
+
+## ====================================================================================
+## save dat
+## ===================================================================================
+saveRDS(basevect, "../dat-private/rauma/dat-mod/sukellus-pisteet.rds")
+saveRDS(biodat, "../dat-private/rauma/dat-mod/sukellus-bio.rds")
