@@ -1,7 +1,7 @@
 ## CC BY 4.0! sisältää Maanmittauslaitoksen Maastokartan 03/2024 aineistoa
 ## NOTE rocks in water classes: Vedenalainen (38511) Pinnassa (38512) 
 ##    Vedenpäällinen (38513) Vesikivikko (38600) 
-## FIXME from maasto2, maastokuvionreuna uniquely epamaarainen reunaviiva ja yksikasitteinen
+## NOTE from maasto2, maastokuvionreuna uniquely epamaarainen reunaviiva ja yksikasitteinen
 ##    see email mml 11.3. may wish to grab matalikko 38600 and maatuva vesialue 38300 -
 ##    not doing this now for simplicity but may need to discuss; inspected visually and it seems
 ##    unnecessary for our purposes
@@ -19,7 +19,7 @@ library(leaflet)
 ## define functions needed later
 ## ======================================================================================
 ## function that combines the classes we want from ter and selects accordingly
-## FIXME there is still some rantaviiva missing by e.g. Preiviikki, so some category is still needed
+## NOTE there is still some rantaviiva missing by e.g. Preiviikki, so some category is still needed
 ##    though could also try to buffer so that they get joined in any case.
 ## I attempted to find the necessary classes but nothing uniquely coastal came up.
 tersub <- function(dat) {
@@ -161,8 +161,9 @@ leaflet() %>%
 ## ============================================================================================
 ## save data
 ## =============================================================================================
-savedat <- F
+savedat <- T
 
+## recall all 4326 epsg
 if(savedat) {
   saveRDS(tdatz, "../dat-private/rauma/dat-mod/beach.rds")
   saveRDS(hpoints, "../dat-private/rauma/dat-mod/rocks.rds")

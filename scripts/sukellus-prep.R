@@ -18,6 +18,7 @@ crs(expo) <- "epsg:3067"
 rockies <- readRDS("../dat-private/rauma/dat-mod/rockies.rds")
 rocks <- readRDS("../dat-private/rauma/dat-mod/rocks.rds")
 
+beach <- st_read("../dat-private/rauma/RantaviivaEmmalle.shp")
 
 ## =======================================================
 ## Create sediment index
@@ -27,7 +28,6 @@ sedcols <- c("Kallio", "Lohkare....3000.mm", "Lohkare.1200.3000.mm", "Lohkare.60
              "Iso.kivi.100.600.mm", "Pieni.kivi.60.100.mm", "Sora.2.0.60.mm", "Hiekka.0.06.2.0.mm",
              "Siltti.0.002.0.06", "Muta..0.002.mm","Konkreetiot","Keinotekoinen.alusta", "Puun.rungot.oksat")
 ocols <- c("Kohteen.nimi.","Arviointiruudun.syvyys")
-## fIXME: add siltti ja muta megapehmea, ana have as another predictor in addition to psoft.
 
 ## melt for these cols
 sedat <- melt(dat[-which(duplicated(dat$Kohteen.nimi.)),], #since spp data in long format
@@ -56,7 +56,7 @@ names(sedsoft2)[names(sedsoft2)=="TotProp"] <- "pMegaSoft"
 
 sedsoft <- merge(sedsoft, sedsoft2)
 
-## take pSoft into main data frame
+## take pSoft and pMegaSoft into main data frame
 ## NOTE this is now an inner join because default all=F. So now we also drop the line data
 dat <- merge(dat, sedsoft[,c("Kohteen.nimi.","pSoft", "pMegaSoft")], sort = F)
 
@@ -85,13 +85,13 @@ basespat <- SpatialPointsDataFrame(coords = basedat[,c("Arviointiruudun.E.koordi
                                    proj4string=CRS("+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0"),
                                    data=basedat )
 basevect <- vect(basespat)
+basevect <- project(basevect, crs("epsg:3067")) # for calculating distances
 
 ## ==============================================================================
 ## biological data
 ## ==============================================================================
 ## select cols we want
-biocols <- c("HAVAITTU.LAJI.lajiryhmä.","Peittävyysprosentti","Lukumäärä", "Määrän.yksikkö",
-             "Lajin.keskimääräinen.korkeus", "Biomassa")
+biocols <- c("HAVAITTU.LAJI.lajiryhmä.","Peittävyysprosentti")
 
 ## select spp we want:
 ## syvyyden optimiarvot avainlajielle (Fucus sp., Furcellaria lumbricalis, Polysiphonia fucoides, 
@@ -128,11 +128,8 @@ biodat <- merge(biodat, unique(dat[,c('Kohteen.nimi.','Arviointiruudun.syvyys', 
 ## ==============================================================================
 ## put in exposure values from raster
 ## ==============================================================================
-## change crs of basevect to match
-baserast <- project(basevect, "epsg:3067")
-
 # Extract the raster values at the point locations
-extracted_values <- extract(expo, baserast)
+extracted_values <- extract(expo, basevect)
 
 basevect$Exposure <- extracted_values$`tahko-exp`
 
@@ -142,11 +139,25 @@ basevect$Exposure[basevect$Kohteen.nimi.=='W001_2,5_8'] <- basevect$Exposure[bas
 ## add to biodat too
 biodat <- merge(biodat, basevect[,c("Kohteen.nimi.", "Exposure")], sort=F)
 
+## =============================================================================
+## get shortest distance to beach 
+## =============================================================================
+distances <- st_distance(st_as_sf(basevect), beach)
+
+# To get a simple vector of distances when there's only one line or polygon in 'vector_sf':
+distance_vector <- as.vector(distances)
+
+basevect$Dist <- distance_vector
+
+## add to biodat too
+biodat <- merge(biodat, basevect[,c("Kohteen.nimi.", "Dist")], sort=F)
+
 ## =======================================================================================
 ## plotting
 ## =================================================================================
 ## create right epsg for leaflet for basevect
 baseleaf <- project(basevect, crs("epsg:4326"))
+beachleaf <- st_transform(beach, crs("epsg:4326"))
 
 ## define colour scheme for rock
 rockpal <- colorFactor(palette = c('#80cdc1','#018571','#a6611a'),
@@ -161,10 +172,12 @@ lutupal <- colorFactor(palette=c('#a6cee3','#1f78b4','#b2df8a','#33a02c','#fb9a9
 
 leaflet() %>%
   addProviderTiles(provider = providers$OpenTopoMap) %>% # doesn't show nature areas as well as open
-  addCircles(data=baseleaf, label = ~Kohteen.nimi., color=~lutupal(LuTu.final),
-             fillColor = ~lutupal(LuTu.final), radius=~Secchi.syvyys.m*10) %>%
+  addCircles(data=baseleaf, color=~lutupal(LuTu.final),
+             fillColor = ~lutupal(LuTu.final), radius=~Secchi.syvyys.m*10,
+             label=~Dist) %>%
   addPolygons(data=rockies, weight=3, color='black', fillColor = '#80cdc1', label="Kivikko", fillOpacity = 0.7) %>%
   addCircles(data=rocks, weight=3, color=~rockpal(Kivi), fillColor = ~rockpal(Kivi)) %>%
+  addPolylines(data=beachleaf, color="black") %>%
   addScaleBar(position="bottomright", options = scaleBarOptions(imperial=F))
 
 ggplot(biodat, aes(x=Secchi.syvyys.m, y=Arviointiruudun.syvyys, group= HAVAITTU.LAJI.lajiryhmä.,

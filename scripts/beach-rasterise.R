@@ -7,7 +7,7 @@ library(sp)
 library(terra)
 library(leaflet)
 
-## read data
+## read data (recall all epsg 4326 to start)
 sea <- readRDS("../dat-private/rauma/dat-mod/sea.rds")
 notsea1 <- readRDS("../dat-private/rauma/dat-mod/rockies.rds")
 notsea2 <- readRDS("../dat-private/rauma/dat-mod/rocks.rds")
