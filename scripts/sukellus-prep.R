@@ -3,6 +3,7 @@ library(reshape2)
 library(plyr)
 library(dplyr)
 library(ggplot2)
+library(sp)
 library(sf)
 library(terra)
 
@@ -96,7 +97,7 @@ biocols <- c("HAVAITTU.LAJI.lajiryhmä.","Peittävyysprosentti")
 ## select spp we want:
 ## syvyyden optimiarvot avainlajielle (Fucus sp., Furcellaria lumbricalis, Polysiphonia fucoides, 
 ##    Rhodomela confervoides sekä Mytilus trossulus 
-spwant <- c("Fucus", "Fucus radicans", "Furcellaria lumbricalis", "Polysiphonia fucoides",
+spwant <- c("Battersia arctica","Fucus", "Fucus radicans", "Furcellaria lumbricalis", "Polysiphonia fucoides",
             "Rhodomela confervoides","Mytilus trossulus", "Ajelehtiva Fucus (elossa)" )
 
 ## subset dat accordingly
@@ -166,7 +167,7 @@ lutupal <- colorFactor(palette=c('#a6cee3','#1f78b4','#b2df8a','#33a02c','#fb9a9
                                  '#ff7f00','#cab2d6','#969696'),
                        levels=c("I1.01 Haurupohjat", "I4.01 Sinisimpukkapohjat", "I02.02 Vitapohjat",
                                 "I2.05 Ärviäpohjat", "I04.03 Merirokkopohjat","I1.02 Punaleväpohjat",
-                                "I5.03 Yksivuotisten rihmalevien luonnehtimat pohjat",
+                                "I5.03 Yksivuotisten rihmalevien luonnehtimat pohjat ",
                                 "I1.03 Monivuotisten rihmalevien luonnehtimat pohjat",
                                 "I5.02 Kultajouhi- ja jouhileväpohjat","ei luontotyyppiä"  ))
 

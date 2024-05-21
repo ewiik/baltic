@@ -57,6 +57,8 @@ removedups <- function(ids, dat) {
 ## =======================================================================================
 ## read and preprocess data, grab as list
 ## =======================================================================================
+## FIXME southernmost line was a bit too close to edge so post-computing file #6 separately,
+##    not tidy with rest of script right now
 ## define situation
 tlaywant <- "maastokuvionreuna" 
 hlaywant <- c("vesikivi","vesikivikko")
@@ -85,6 +87,11 @@ names(hdatz) <- paste("hdat",seq_along(hdatz), sep="") # probs no need for infor
 sdatz <- lapply(sfiles, st_read, layer=slaywant)
 names(sdatz) <- paste("sdat",seq_along(sdatz), sep="") # probs no need for informative names
 
+seafeat <- st_read("../dat-private/rauma/hydro-6.gpkg", layer = 'vesikivi')
+seafeat2 <- st_read("../dat-private/rauma/hydro-6.gpkg", layer = 'vesikivikko')
+sea <- st_read("../dat-private/rauma/hydro-6.gpkg", layer = 'meri')
+six <- list(sea = sea, seafeat = seafeat, seafeat2=seafeat2)
+
 ## make maasto smaller by grabbing the rows we need
 ## NOTE: initially done by inspection through leaflet, confirmed with mml via email 11.3.
 tdatz <- lapply(tdatz, tersub)
@@ -93,6 +100,9 @@ tdatz <- lapply(tdatz, tersub)
 tdatz <- lapply(tdatz, st_transform, crs = 4326)
 hdatz <- lapply(hdatz, st_transform, crs = 4326)
 sdatz <- lapply(sdatz, st_transform, crs = 4326)
+
+six <- lapply(six, st_transform, crs=4326)
+list2env(six, envir = globalenv())
 
 ## since had to manually draw download boxes, need to check for duplicated objects
 ## Note not doing this for sea as will dissolve it all
@@ -115,6 +125,8 @@ sdatz <- do.call(rbind, sdatz)
 ## dissolve sea
 sdatz <- st_union(sdatz)
 
+sea <- st_union(sea)
+
 ## ===============================================================================================
 ## create descriptive values for the different classes of map object
 ## ==============================================================================================
@@ -131,6 +143,13 @@ rock$Kivi <- c("Vedenalainen",'Pinnassa',"Vedenpaallinen")
 ## merge into parent
 tdatz <- sp::merge(tdatz, beach)
 hpoints <- sp::merge(hpoints, rock)
+
+## FIXME for six
+rock <- data.frame(kohdeluokka=unique(seafeat$kohdeluokka), Kivi=NA)
+rock <- rock[order(rock$kohdeluokka),] # ibid
+rock$Kivi <- c("Vedenalainen",'Pinnassa',"Vedenpaallinen")
+## merge into parent
+seafeat <- sp::merge(seafeat, rock)
 
 ## ===========================================================================================
 ## plots on leaflet checking stuff out
@@ -170,3 +189,8 @@ if(savedat) {
   saveRDS(hpolys, "../dat-private/rauma/dat-mod/rockies.rds")
   saveRDS(sdatz, "../dat-private/rauma/dat-mod/sea.rds")
 }
+
+## FIXME six
+saveRDS(seafeat,"../dat-private/rauma/dat-mod/rocks-six.rds")
+saveRDS(seafeat2,"../dat-private/rauma/dat-mod/rockies-six.rds")
+saveRDS(sea, "../dat-private/rauma/dat-mod/sea-six.rds")

@@ -27,7 +27,7 @@ invlogit <- function(x) {exp(x)/(1+exp(x))}
 
 ## model what we want
 spplist <- unique(biodat$HAVAITTU.LAJI.lajiryhmä.)
-spwant <- "Mytilus trossulus"
+spwant <- "Battersia arctica"
 
 ## select data modelable for spwant
 moddat <- biodat[which(biodat$HAVAITTU.LAJI.lajiryhmä.==spwant),]
@@ -339,7 +339,8 @@ sumall$HAVAITTU.LAJI.lajiryhmä. <- "Reference"
 
 sumall <- bind_rows(sumall, sppsum[-which(sppsum$variable=="Cover"),c('HAVAITTU.LAJI.lajiryhmä.','variable','minVal','maxVal')])
 sumall$HAVAITTU.LAJI.lajiryhmä. <- factor(sumall$HAVAITTU.LAJI.lajiryhmä.,
-                                          levels = c("Reference","Fucus","Fucus radicans","Furcellaria lumbricalis",
+                                          levels = c("Reference","Battersia arctica", "Fucus","Fucus radicans",
+                                                     "Furcellaria lumbricalis",
                                                      "Mytilus trossulus","Polysiphonia fucoides","Rhodomela confervoides" ))
 pointsall <- sumall[which(sumall$minVal == sumall$maxVal),]
 pointsall <- rbind(pointsall, sumall[which(sumall$maxVal/sumall$minVal < 1.1),])

@@ -10,6 +10,8 @@ library(terra)
 #library(ggspatial)
 #library(leaflet) # list of providertiles https://www.kaggle.com/code/devzohaib/interactive-maps-with-leaflet-in-r
 
+## lest we forget
+## https://stats.stackexchange.com/questions/33327/confidence-interval-for-gam-model
 
 ## read dat
 basedat <- readRDS("../dat-private/rauma/dat-mod/sukellus-pisteet.rds")
@@ -38,9 +40,10 @@ freqtab <- ddply(lutu, .(LuTu.final), summarize, Tot=n())
 
 ## choose what want to model
 llist <- unique(lutu$LuTu.final)
-lwant <- "ei luontotyyppiä"
+lwant <- "I1.03 Monivuotisten rihmalevien luonnehtimat pohjat"
 
 moddat <- as.data.frame(lutu)
+#write.csv(moddat, "../dat-private/rauma/dat-mod/lutu.csv", row.names = F) # for python work
 moddat$response <- ifelse(moddat$LuTu.final == lwant, 1,0)
 
 if(lwant=='I4.01 Sinisimpukkapohjat') {
